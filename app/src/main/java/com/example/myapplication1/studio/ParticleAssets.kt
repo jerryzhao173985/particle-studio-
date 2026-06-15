@@ -144,12 +144,16 @@ internal fun heartPath(radiusPx: Float): Path {
  */
 class StudioAssets(density: Density) {
     private val d: Float = density.density
-    val glow: ImageBitmap = softGlowBitmap((56 * d).toInt())
+    // Sprites are generated at a generous base size so that scenes which scale them UP (nebula
+    // grows the glow 2–3×, aurora stretches the veil) sample a crisp source instead of upscaling
+    // a small bitmap. GPU texture memory is abundant and idle here (~MBs), and these are built
+    // once — so this spends cheap, plentiful GPU memory for sharper glow at zero per-frame cost.
+    val glow: ImageBitmap = softGlowBitmap((112 * d).toInt())
     val streakVertical: ImageBitmap =
-        streakBitmap(longPx = (44 * d).toInt(), shortPx = (7 * d).toInt(), vertical = true)
+        streakBitmap(longPx = (64 * d).toInt(), shortPx = (10 * d).toInt(), vertical = true)
     val streakHorizontal: ImageBitmap =
-        streakBitmap(longPx = (60 * d).toInt(), shortPx = (13 * d).toInt(), vertical = false)
-    val veil: ImageBitmap = veilBitmap((92 * d).toInt(), (300 * d).toInt())
+        streakBitmap(longPx = (84 * d).toInt(), shortPx = (16 * d).toInt(), vertical = false)
+    val veil: ImageBitmap = veilBitmap((124 * d).toInt(), (404 * d).toInt())
 }
 
 /**
