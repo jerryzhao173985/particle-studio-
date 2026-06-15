@@ -52,14 +52,9 @@ private const val TWO_PI = (2.0 * PI).toFloat()
 fun rememberAmbientOffset(motion: SceneMotion, active: Boolean): DpOffset {
     if (motion is SceneMotion.None) return DpOffset.Zero
 
-    // Smooth hand-off so the living sway fades out while dragging and fades back in after.
-    val gain by animateFloatAsState(
-        targetValue = if (active) 1f else 0f,
-        animationSpec = tween(durationMillis = 1200),
-        label = "ambientGain",
-    )
-    if (gain <= 0.001f) return DpOffset.Zero
-
+    // NB: create the transition and gain UNCONDITIONALLY (no early return between them) so the
+    // remembered slot count is stable across recompositions — otherwise a long drag that drives
+    // gain to 0 would tear down and later recreate the transition, resetting its phase.
     val transition = rememberInfiniteTransition(label = "ambient")
     val phase by transition.animateFloat(
         initialValue = 0f,
@@ -70,6 +65,13 @@ fun rememberAmbientOffset(motion: SceneMotion, active: Boolean): DpOffset {
         ),
         label = "phase",
     )
+    // Smooth hand-off so the living sway fades out while dragging and fades back in after.
+    val gain by animateFloatAsState(
+        targetValue = if (active) 1f else 0f,
+        animationSpec = tween(durationMillis = 1200),
+        label = "ambientGain",
+    )
+    if (gain <= 0.001f) return DpOffset.Zero
 
     return when (motion) {
         is SceneMotion.None -> DpOffset.Zero

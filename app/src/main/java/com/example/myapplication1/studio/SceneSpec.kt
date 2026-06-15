@@ -95,6 +95,12 @@ data class SceneSpec(
     val emojis: List<String> = emptyList(),
     /** Ambient drift applied to the emitter when the user isn't steering it. */
     val motion: SceneMotion = SceneMotion.None,
+    /**
+     * Whether to render the faint parallax "dust" layer behind this scene. Disabled for the
+     * opaque SrcOver "paper" scenes (confetti / emoji / blossom) where an additive glow haze
+     * behind solid shapes reads wrong.
+     */
+    val backdrop: Boolean = true,
 ) {
     /** True when the scene rotates its (non-circle) particles — used to orient streaks. */
     val rotates: Boolean get() = rotation.first != 0 || rotation.last != 0

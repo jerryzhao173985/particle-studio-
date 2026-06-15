@@ -183,6 +183,7 @@ object SceneCatalog {
             alphaEasing = EaseIn, scaleEasing = FastOutSlowInEasing,
             gradient = listOf(hex("#FF1A1033"), hex("#FF120A24"), hex("#FF080513")),
             accent = hex("#FFFFC542"),
+            backdrop = false,
         ),
         SceneSpec(
             id = "neonRain",
@@ -270,6 +271,7 @@ object SceneCatalog {
             gradient = listOf(hex("#FF0B0F2A"), hex("#FF14193D"), hex("#FF050713")),
             emojis = listOf("🎉", "✨", "💖", "🌈", "⭐", "🍭", "🎈", "🦄", "🍬", "💫"),
             accent = hex("#FFFFC542"),
+            backdrop = false,
         ),
         SceneSpec(
             id = "risingBubbles",
@@ -412,6 +414,7 @@ object SceneCatalog {
             alphaEasing = EaseOut, scaleEasing = FastOutSlowInEasing,
             gradient = listOf(hex("#FF1A0E16"), hex("#FF2A1422"), hex("#FF120810")),
             accent = hex("#FFFFB3D1"),
+            backdrop = false,
         ),
         SceneSpec(
             id = "auroraVeil",

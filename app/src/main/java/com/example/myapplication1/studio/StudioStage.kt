@@ -122,7 +122,9 @@ internal fun StudioStage(
             gravityStrength = animGravity,
             edge = edge,
         )
-        val backdropPps = (animPps * 0.18f).roundToInt().coerceIn(4, 14)
+        // Keep the backdrop emitter mounted (no add/remove churn on switch), but zero its
+        // birth-rate on opaque "paper" scenes so no additive dust hazes behind solid shapes.
+        val backdropPps = if (scene.backdrop) (animPps * 0.18f).roundToInt().coerceIn(4, 14) else 0
         val backdropConfig = scene.toBackdropConfig(
             center = DpOffset(w / 2, h / 2),
             regionSize = DpSize(w, h),
