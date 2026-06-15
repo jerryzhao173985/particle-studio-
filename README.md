@@ -11,11 +11,20 @@ frame, scene changes dissolve gracefully (in-flight particles from the old scene
 their life as the new one is born), live controls update instantly, and the whole thing
 stays allocation-light.
 
-| Aurora Fountain | Aurora Veil | Fireflies |
-|:---:|:---:|:---:|
-| ![Aurora Fountain](screenshots/01-aurora-fountain.png) | ![Aurora Veil](screenshots/02-aurora-veil.png) | ![Fireflies](screenshots/03-fireflies.png) |
-| **Festival Confetti** | **Cherry Blossom** | **Landscape** |
-| ![Festival Confetti](screenshots/04-festival-confetti.png) | ![Cherry Blossom](screenshots/05-cherry-blossom.png) | ![Landscape](screenshots/06-landscape.png) |
+<!-- Fixed-width <img> so every thumbnail renders at the same scale regardless of the
+     source PNG dimensions (a plain Markdown image table sizes columns to the widest image). -->
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="screenshots/01-aurora-fountain.png" width="230" alt="Aurora Fountain"><br><sub><b>Aurora Fountain</b></sub></td>
+    <td align="center" width="33%"><img src="screenshots/02-aurora-veil.png" width="230" alt="Aurora Veil"><br><sub><b>Aurora Veil</b></sub></td>
+    <td align="center" width="33%"><img src="screenshots/03-fireflies.png" width="230" alt="Fireflies"><br><sub><b>Fireflies</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/04-festival-confetti.png" width="230" alt="Festival Confetti"><br><sub><b>Festival Confetti</b></sub></td>
+    <td align="center"><img src="screenshots/05-cherry-blossom.png" width="230" alt="Cherry Blossom"><br><sub><b>Cherry Blossom</b></sub></td>
+    <td align="center"><img src="screenshots/06-landscape.png" width="230" alt="Landscape / tablet layout"><br><sub><b>Landscape</b></sub></td>
+  </tr>
+</table>
 
 ---
 
