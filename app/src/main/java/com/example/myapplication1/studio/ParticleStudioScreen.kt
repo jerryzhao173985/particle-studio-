@@ -1,6 +1,7 @@
 package com.example.myapplication1.studio
 
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -128,6 +129,15 @@ fun ParticleStudioScreen() {
     val accent by animateColorAsState(scene.accent, tween(if (reduceMotion) 0 else 600), label = "accent")
     val targetPps = intensity ?: scene.particlePerSecond.toFloat()
     val edge = if (edgeIndex >= 0) EDGE_OPTIONS[edgeIndex].behavior else scene.edge
+    val haptics = rememberStudioHaptics(enabled = !reduceMotion)
+
+    // Predictive back: dismiss the info panel / stop the auto-tour before the gesture exits the app.
+    BackHandler(enabled = showInfo || autoTour) {
+        when {
+            showInfo -> showInfo = false
+            autoTour -> autoTour = false
+        }
+    }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // A docked side panel needs BOTH room across (≥840dp: tablet / foldable / unfolded)
@@ -156,9 +166,9 @@ fun ParticleStudioScreen() {
                 index = sceneIndex + 1,
                 total = scenes.size,
                 infoOpen = showInfo,
-                onToggleInfo = { showInfo = !showInfo },
+                onToggleInfo = { showInfo = !showInfo; haptics.toggle(showInfo) },
                 autoTour = autoTour,
-                onToggleTour = { autoTour = !autoTour },
+                onToggleTour = { autoTour = !autoTour; haptics.toggle(autoTour) },
                 reduceMotion = reduceMotion,
                 modifier = m,
             )
@@ -169,10 +179,10 @@ fun ParticleStudioScreen() {
                 pps = targetPps,
                 onPps = { intensity = it },
                 gravityOn = gravityOn,
-                onGravity = { gravityOn = it },
+                onGravity = { gravityOn = it; haptics.toggle(it) },
                 currentEdge = edge,
-                onEdge = { edgeIndex = edgeIndexOf(it) },
-                onReset = ::resetOverrides,
+                onEdge = { edgeIndex = edgeIndexOf(it); haptics.select() },
+                onReset = { resetOverrides(); haptics.reset() },
                 modifier = m,
             )
         }
@@ -202,7 +212,7 @@ fun ParticleStudioScreen() {
                         scenes = scenes,
                         accent = accent,
                         selected = sceneIndex,
-                        onSelect = { autoTour = false; goToScene(it) },
+                        onSelect = { autoTour = false; haptics.select(); goToScene(it) },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -238,7 +248,7 @@ fun ParticleStudioScreen() {
                         scenes = scenes,
                         accent = accent,
                         selected = sceneIndex,
-                        onSelect = { autoTour = false; goToScene(it) },
+                        onSelect = { autoTour = false; haptics.select(); goToScene(it) },
                         modifier = Modifier.padding(top = 14.dp, bottom = 8.dp),
                     )
                 }
