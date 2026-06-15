@@ -155,11 +155,10 @@ internal fun petalPath(radiusPx: Float): Path {
  */
 class StudioAssets(density: Density) {
     private val d: Float = density.density
-    // Sprites are generated at a generous base size so that scenes which scale them UP (nebula
-    // grows the glow 2–3×, aurora stretches the veil) sample a crisp source instead of upscaling
-    // a small bitmap. GPU texture memory is abundant and idle here (~MBs), and these are built
-    // once — so this spends cheap, plentiful GPU memory for sharper glow at zero per-frame cost.
-    val glow: ImageBitmap = softGlowBitmap((112 * d).toInt())
+    // NOTE: the engine draws an Image particle at the bitmap's pixel size (it ignores
+    // particleSizes), so for glow particles the bitmap size IS the on-screen size. Keep it
+    // restrained — an oversized glow reads as a washed-out blur, not a crisp light point.
+    val glow: ImageBitmap = softGlowBitmap((56 * d).toInt())
     val streakVertical: ImageBitmap =
         streakBitmap(longPx = (64 * d).toInt(), shortPx = (10 * d).toInt(), vertical = true)
     val streakHorizontal: ImageBitmap =

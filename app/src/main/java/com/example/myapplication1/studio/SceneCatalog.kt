@@ -470,7 +470,7 @@ object SceneCatalog {
             sizes = listOf(sz(40, 40), sz(64, 64), sz(96, 96)),
             spread = -40..40, blend = BlendMode.Screen,
             initialForce = 10..30,
-            startScale = 0..1, targetScale = 2..3,
+            startScale = 0..1, targetScale = 1..2,
             gravityStrength = 4f, gravityAngle = 180,
             edge = EdgeBehavior.None,
             alphaEasing = EaseOut, scaleEasing = FastOutSlowInEasing,
