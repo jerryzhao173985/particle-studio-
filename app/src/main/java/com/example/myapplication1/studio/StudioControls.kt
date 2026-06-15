@@ -36,8 +36,9 @@ import androidx.compose.ui.unit.dp
 import dev.piotrprus.particleemitter.EdgeBehavior
 import kotlin.math.roundToInt
 
-/** Slider bounds for the live birth-rate control. */
-internal const val MIN_PPS = 10f
+/** Slider bounds for the live birth-rate control. The low end supports sparse "hero" scenes
+ *  (e.g. Will-o'-the-Wisp) where only a handful of slow particles should exist at once. */
+internal const val MIN_PPS = 3f
 internal const val MAX_PPS = 350f
 /** Extra particles/second injected by a tap "burst". */
 internal const val BURST_BOOST = 170f

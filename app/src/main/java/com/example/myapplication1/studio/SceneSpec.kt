@@ -22,6 +22,7 @@ enum class ShapeKind {
     STREAK_IMAGE,    // elongated streak — rain (vertical) / meteor (horizontal)
     STAR_PATH,
     HEART_PATH,
+    PETAL_PATH,      // teardrop petal — for blossoms
     TEXT_EMOJI,
 }
 

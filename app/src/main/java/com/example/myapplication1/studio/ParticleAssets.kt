@@ -139,6 +139,17 @@ internal fun heartPath(radiusPx: Float): Path {
     return path
 }
 
+/** A teardrop petal [Path] — pointed at the top, rounded at the base, centred on the origin. */
+internal fun petalPath(radiusPx: Float): Path {
+    val s = radiusPx
+    val path = Path()
+    path.moveTo(0f, -s)
+    path.cubicTo(0.92f * s, -0.20f * s, 0.58f * s, 0.95f * s, 0f, s)
+    path.cubicTo(-0.58f * s, 0.95f * s, -0.92f * s, -0.20f * s, 0f, -s)
+    path.close()
+    return path
+}
+
 /**
  * Holds the shared, procedurally-built sprites for one density. Built once and remembered.
  */
@@ -186,11 +197,17 @@ fun resolveShapes(
                 val rPx = with(density) { s.width.toPx() } / 2f
                 out += ParticleShape.PathShape(heartPath(rPx.coerceAtLeast(4f) * 0.8f))
             }
+            ShapeKind.PETAL_PATH -> scene.sizes.forEach { s ->
+                val rPx = with(density) { s.width.toPx() } / 2f
+                out += ParticleShape.PathShape(petalPath(rPx.coerceAtLeast(4f) * 0.9f))
+            }
             ShapeKind.TEXT_EMOJI -> scene.emojis.forEachIndexed { i, e ->
                 val s = scene.sizes[i % scene.sizes.size]
                 out += ParticleShape.Text(
                     text = e,
-                    textStyle = TextStyle(fontSize = s.width.value.sp),
+                    // Colour the glyph (scene's first colour) so monochrome symbol glyphs render
+                    // visibly; colour emoji ignore this and keep their own bitmap colours.
+                    textStyle = TextStyle(fontSize = s.width.value.sp, color = scene.colors.first()),
                     textMeasurer = measurer,
                 )
             }
