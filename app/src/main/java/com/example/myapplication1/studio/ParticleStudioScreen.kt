@@ -9,14 +9,20 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
@@ -123,7 +129,12 @@ fun ParticleStudioScreen() {
     val targetPps = intensity ?: scene.particlePerSecond.toFloat()
     val edge = if (edgeIndex >= 0) EDGE_OPTIONS[edgeIndex].behavior else scene.edge
 
-    Box(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // A docked side panel needs BOTH room across (≥840dp: tablet / foldable / unfolded)
+        // AND room down (≥600dp) — a short phone-landscape would just cramp it, so that case
+        // keeps the immersive top-bar + centered-bottom-controls column.
+        val expanded = maxWidth >= 840.dp && maxHeight >= 600.dp
+
         StudioStage(
             scene = scene,
             shapes = shapes,
@@ -138,7 +149,7 @@ fun ParticleStudioScreen() {
             reduceMotion = reduceMotion,
         )
 
-        Column(Modifier.fillMaxSize()) {
+        val topBar: @Composable (Modifier) -> Unit = { m ->
             StudioTopBar(
                 scene = scene,
                 accent = accent,
@@ -149,46 +160,88 @@ fun ParticleStudioScreen() {
                 autoTour = autoTour,
                 onToggleTour = { autoTour = !autoTour },
                 reduceMotion = reduceMotion,
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                modifier = m,
             )
+        }
+        val controls: @Composable (Modifier) -> Unit = { m ->
+            LiveControlsPanel(
+                accent = accent,
+                pps = targetPps,
+                onPps = { intensity = it },
+                gravityOn = gravityOn,
+                onGravity = { gravityOn = it },
+                currentEdge = edge,
+                onEdge = { edgeIndex = edgeIndexOf(it) },
+                onReset = ::resetOverrides,
+                modifier = m,
+            )
+        }
 
-            AnimatedVisibility(
-                visible = showInfo,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut(),
-            ) {
-                SceneInfoPanel(scene, accent, Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+        if (expanded) {
+            // Side panel over a full-bleed stage; the scene list runs vertically and scrolls.
+            Row(Modifier.fillMaxSize()) {
+                Column(
+                    Modifier
+                        .width(360.dp)
+                        .fillMaxHeight()
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 16.dp),
+                ) {
+                    topBar(Modifier)
+                    AnimatedVisibility(
+                        visible = showInfo,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut(),
+                    ) {
+                        SceneInfoPanel(scene, accent, Modifier.padding(top = 10.dp))
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    controls(Modifier)
+                    Spacer(Modifier.height(14.dp))
+                    SceneSelectorColumn(
+                        scenes = scenes,
+                        accent = accent,
+                        selected = sceneIndex,
+                        onSelect = { autoTour = false; goToScene(it) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.weight(1f))
             }
-
-            Spacer(Modifier.weight(1f))
-
-            Column(
-                Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .widthIn(max = 640.dp)
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-            ) {
-                LiveControlsPanel(
-                    accent = accent,
-                    pps = targetPps,
-                    onPps = { intensity = it },
-                    gravityOn = gravityOn,
-                    onGravity = { gravityOn = it },
-                    currentEdge = edge,
-                    onEdge = { edgeIndex = edgeIndexOf(it) },
-                    onReset = ::resetOverrides,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+        } else {
+            Column(Modifier.fillMaxSize()) {
+                topBar(
+                    Modifier
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
                 )
-                SceneSelectorRail(
-                    scenes = scenes,
-                    accent = accent,
-                    selected = sceneIndex,
-                    onSelect = { autoTour = false; goToScene(it) },
-                    modifier = Modifier.padding(top = 14.dp, bottom = 8.dp),
-                )
+
+                AnimatedVisibility(
+                    visible = showInfo,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut(),
+                ) {
+                    SceneInfoPanel(scene, accent, Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                Column(
+                    Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .widthIn(max = 640.dp)
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                ) {
+                    controls(Modifier.padding(horizontal = 16.dp))
+                    SceneSelectorRail(
+                        scenes = scenes,
+                        accent = accent,
+                        selected = sceneIndex,
+                        onSelect = { autoTour = false; goToScene(it) },
+                        modifier = Modifier.padding(top = 14.dp, bottom = 8.dp),
+                    )
+                }
             }
         }
     }
