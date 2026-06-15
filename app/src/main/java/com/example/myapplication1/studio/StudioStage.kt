@@ -193,8 +193,10 @@ internal fun StudioStage(
                 }
         )
 
-        // --- Layer A2: GPU AGSL aurora, blended additively over the gradient (API 33+, else no-op) ---
-        AuroraShaderLayer(
+        // --- Layer A2: the scene's GPU AGSL atmosphere, blended additively over the gradient
+        // (per-scene & typed; API 33+, else no-op — None scenes keep the plain gradient) ---
+        AtmosphereLayer(
+            atmosphere = scene.atmosphere,
             accent = accent,
             intensity = intensity,
             touchPx = with(density) { Offset(emitX.toPx(), emitY.toPx()) },

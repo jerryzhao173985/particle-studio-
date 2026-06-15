@@ -66,6 +66,7 @@ object SceneCatalog {
             alphaEasing = EaseIn, scaleEasing = EaseOut,
             gradient = listOf(hex("#FF050912"), hex("#FF0A1424"), hex("#FF050A10")),
             accent = hex("#FF4DD8FF"),
+            atmosphere = Atmosphere.Aurora,
             motion = SceneMotion.Sway(amplitudeDp = 74f, periodMs = 7000),
         ),
         SceneSpec(
@@ -96,6 +97,7 @@ object SceneCatalog {
             alphaEasing = EaseOut, scaleEasing = FastOutSlowInEasing,
             gradient = listOf(hex("#FF0A0612"), hex("#FF150A24"), hex("#FF08060F")),
             accent = hex("#FFB36AF0"),
+            atmosphere = Atmosphere.Nebula,
             motion = SceneMotion.Drift(radiusDp = 72f, periodMs = 17000),
         ),
         SceneSpec(
@@ -154,6 +156,7 @@ object SceneCatalog {
             alphaEasing = EaseOut, scaleEasing = EaseOut,
             gradient = listOf(hex("#FF120703"), hex("#FF1F0C04"), hex("#FF050201")),
             accent = hex("#FFFFA63D"),
+            atmosphere = Atmosphere.Heat,
             motion = SceneMotion.Sway(amplitudeDp = 24f, periodMs = 3800),
         ),
         SceneSpec(
@@ -241,6 +244,7 @@ object SceneCatalog {
             alphaEasing = EaseOut, scaleEasing = FastOutSlowInEasing,
             gradient = listOf(hex("#FF03110D"), hex("#FF071F18"), hex("#FF02070A")),
             accent = hex("#FF36F1B0"),
+            atmosphere = Atmosphere.Nebula,
             motion = SceneMotion.Orbit(radiusDp = 40f, periodMs = 11000),
         ),
         SceneSpec(
@@ -443,6 +447,7 @@ object SceneCatalog {
             alphaEasing = EaseOut, scaleEasing = FastOutSlowInEasing,
             gradient = listOf(hex("#FF02060F"), hex("#FF06121F"), hex("#FF010308")),
             accent = hex("#FF36F0C4"),
+            atmosphere = Atmosphere.Aurora,
         ),
         SceneSpec(
             id = "willOWisp",

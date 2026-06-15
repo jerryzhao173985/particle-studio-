@@ -27,6 +27,14 @@ enum class ShapeKind {
 }
 
 /**
+ * The GPU "atmosphere" a scene lives in — a per-scene AGSL [android.graphics.RuntimeShader]
+ * rendered behind the particles as the living medium (not a blanket overlay). [None] keeps the
+ * plain gradient backdrop. Each value maps to a tuned shader in StudioShaderSky; gated to
+ * API 33+ and disabled under reduced-motion, so it always degrades to the gradient.
+ */
+enum class Atmosphere { None, Aurora, Nebula, Heat }
+
+/**
  * A symbolic emitter position. Mapped to a concrete [DpOffset] from the live screen
  * size by [position] so scenes are resolution-independent.
  */
@@ -102,6 +110,8 @@ data class SceneSpec(
      * behind solid shapes reads wrong.
      */
     val backdrop: Boolean = true,
+    /** The GPU [Atmosphere] shader rendered behind the particles (None = plain gradient). */
+    val atmosphere: Atmosphere = Atmosphere.None,
 ) {
     /** True when the scene rotates its (non-circle) particles — used to orient streaks. */
     val rotates: Boolean get() = rotation.first != 0 || rotation.last != 0

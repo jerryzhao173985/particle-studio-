@@ -20,70 +20,133 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
+import kotlin.math.PI
 
 /** True when the device can run AGSL runtime shaders (Android 13 / API 33+). */
 val agslSupported: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
-// A flowing aurora of accent-tinted light filaments + a soft glow that swells toward the
-// steered source. Output alpha is the luminance so it composites additively (Plus) over the
-// scene's gradient — adding light rather than replacing the backdrop.
+/*
+ * Per-scene GPU "atmosphere" shaders. Each is the living medium a scene's particles move
+ * through — composited additively (Plus) over the scene gradient so it ADDS light, never
+ * replaces the backdrop. All three declare and read the SAME uniform set (iResolution, iTime,
+ * iAccent, iIntensity, iTouch) so a uniform is never stripped (setting a stripped uniform
+ * throws), and so one draw path serves all of them. Output alpha = luminance for clean Plus.
+ *
+ * iTime is fed a value that loops over N·2π, and every time-coefficient below is chosen so
+ * c·N is an integer — i.e. every term advances a whole number of 2π per loop — so the loop is
+ * seamless with no visible jump.
+ */
+
 private const val AURORA_AGSL = """
 uniform float2 iResolution;
 uniform float iTime;
 uniform float3 iAccent;
 uniform float iIntensity;
 uniform float2 iTouch;
-
 half4 main(float2 fragCoord) {
     float2 uv = fragCoord / iResolution;
     float t = iTime;
-
-    // Two drifting horizontal light bands (the "curtain").
     float b1 = 1.0 - abs(uv.y - (0.42 + 0.12 * sin(uv.x * 3.0 + t))) * 6.0;
     float b2 = 1.0 - abs(uv.y - (0.60 + 0.10 * sin(uv.x * 5.0 - t * 1.3))) * 8.0;
-    float band = max(b1, 0.0) + 0.6 * max(b2, 0.0);
-    band *= (0.35 + 0.65 * iIntensity);
-
-    // Soft glow that follows the emitter / finger.
+    float band = (max(b1, 0.0) + 0.6 * max(b2, 0.0)) * (0.35 + 0.65 * iIntensity);
     float2 d = (fragCoord - iTouch) / iResolution.y;
     float glow = exp(-dot(d, d) * 4.0) * (0.4 + 0.6 * iIntensity);
-
     float v = clamp(band * 0.45 + glow * 0.8, 0.0, 1.0);
-    half3 col = half3(iAccent) * v;
-    return half4(col, v);
+    return half4(half3(iAccent) * v, v);
 }
 """
 
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
-private fun newAuroraShader(): RuntimeShader? = runCatching { RuntimeShader(AURORA_AGSL) }.getOrNull()
+private const val NEBULA_AGSL = """
+uniform float2 iResolution;
+uniform float iTime;
+uniform float3 iAccent;
+uniform float iIntensity;
+uniform float2 iTouch;
+half4 main(float2 fragCoord) {
+    float2 uv = (fragCoord - 0.5 * iResolution) / iResolution.y;
+    float t = iTime;
+    float r = length(uv);
+    float a = atan(uv.y, uv.x) + t * 0.3 + r * 2.0;          // swirl
+    float2 p = float2(cos(a), sin(a)) * r;
+    float n = 0.5 + 0.5 * sin(p.x * 6.0 + t) * sin(p.y * 5.0 - t * 0.7);
+    float cloud = smoothstep(0.25, 1.0, n) * (0.3 + 0.7 * iIntensity);
+    float core = exp(-r * r * 2.5) * (0.4 + 0.6 * iIntensity);
+    float2 d = (fragCoord - iTouch) / iResolution.y;
+    float glow = exp(-dot(d, d) * 3.5) * (0.3 + 0.5 * iIntensity);
+    float v = clamp(cloud * 0.5 + core * 0.5 + glow * 0.6, 0.0, 1.0);
+    return half4(half3(iAccent) * v, v);
+}
+"""
+
+private const val HEAT_AGSL = """
+uniform float2 iResolution;
+uniform float iTime;
+uniform float3 iAccent;
+uniform float iIntensity;
+uniform float2 iTouch;
+half4 main(float2 fragCoord) {
+    float2 uv = fragCoord / iResolution;
+    float t = iTime * 3.0;                                    // faster shimmer
+    float base = 1.0 - uv.y;                                  // strongest at the bottom
+    float wob = sin(uv.x * 22.0 + t + sin(uv.y * 12.0 - t * 0.7) * 2.0);
+    float heat = base * base * (0.5 + 0.5 * wob) * (0.35 + 0.65 * iIntensity);
+    float2 d = (fragCoord - iTouch) / iResolution.y;
+    float glow = exp(-dot(d, d) * 5.0) * 0.4 * iIntensity;    // a breath on the embers
+    float v = clamp(heat + glow, 0.0, 1.0);
+    return half4(half3(iAccent) * v, v * 0.85);
+}
+"""
+
+private fun srcFor(atmosphere: Atmosphere): String? = when (atmosphere) {
+    Atmosphere.None -> null
+    Atmosphere.Aurora -> AURORA_AGSL
+    Atmosphere.Nebula -> NEBULA_AGSL
+    Atmosphere.Heat -> HEAT_AGSL
+}
+
+private fun alphaFor(atmosphere: Atmosphere): Float = when (atmosphere) {
+    Atmosphere.Heat -> 0.42f
+    else -> 0.36f
+}
 
 /**
- * A GPU AGSL "aurora" layer, drawn additively over the scene gradient. No-op below API 33 or
- * under reduced-motion (the scene's own gradient/spotlight remain the backdrop). [touchPx] is
- * the current emitter position in pixels so the glow tracks drag-to-steer.
+ * The GPU atmosphere layer for [atmosphere], drawn additively over the scene gradient. No-op for
+ * [Atmosphere.None], below API 33, or under reduced-motion (the gradient remains the backdrop).
+ * [touchPx] is the emitter position in pixels so the field's glow tracks the steered source.
  */
 @Composable
-fun AuroraShaderLayer(
+fun AtmosphereLayer(
+    atmosphere: Atmosphere,
     accent: Color,
     intensity: Float,
     touchPx: Offset,
     reduceMotion: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    if (!agslSupported || reduceMotion) return
-    AuroraShaderLayerImpl(accent, intensity, touchPx, modifier)
+    if (atmosphere == Atmosphere.None || !agslSupported || reduceMotion) return
+    AtmosphereLayerImpl(atmosphere, accent, intensity, touchPx, modifier)
 }
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
-private fun AuroraShaderLayerImpl(accent: Color, intensity: Float, touchPx: Offset, modifier: Modifier) {
-    val shader = remember { newAuroraShader() } ?: return
+private fun AtmosphereLayerImpl(
+    atmosphere: Atmosphere,
+    accent: Color,
+    intensity: Float,
+    touchPx: Offset,
+    modifier: Modifier,
+) {
+    val shader = remember(atmosphere) {
+        srcFor(atmosphere)?.let { src -> runCatching { RuntimeShader(src) }.getOrNull() }
+    } ?: return
     val brush = remember(shader) { ShaderBrush(shader) }
+    val alpha = alphaFor(atmosphere)
     val clock = rememberInfiniteTransition(label = "sky")
+    // Loop over 600·2π so every integer-scaled time term completes whole cycles — seamless.
     val time by clock.animateFloat(
         initialValue = 0f,
-        targetValue = (2.0 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart),
+        targetValue = (600.0 * 2.0 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(tween(600_000, easing = LinearEasing), RepeatMode.Restart),
         label = "skyTime",
     )
     Box(
@@ -96,7 +159,7 @@ private fun AuroraShaderLayerImpl(accent: Color, intensity: Float, touchPx: Offs
                     shader.setFloatUniform("iAccent", accent.red, accent.green, accent.blue)
                     shader.setFloatUniform("iIntensity", intensity.coerceIn(0f, 1f))
                     shader.setFloatUniform("iTouch", touchPx.x, touchPx.y)
-                    drawRect(brush, blendMode = BlendMode.Plus, alpha = 0.38f)
+                    drawRect(brush, blendMode = BlendMode.Plus, alpha = alpha)
                 }
             }
     )
