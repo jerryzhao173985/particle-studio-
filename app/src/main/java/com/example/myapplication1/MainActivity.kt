@@ -15,7 +15,7 @@ import com.example.myapplication1.ui.theme.MyApplication1Theme
  *
  * The whole app is a single live stage: one
  * [dev.piotrprus.particleemitter.CanvasParticleEmitter] fills the screen and its
- * config is swapped between 14 curated scenes that, together, exercise every
+ * config is swapped between 15 curated scenes that, together, exercise every
  * feature of the package (all 5 start-region shapes, all 4 particle shapes, all 4
  * edge behaviours, gravity in every direction, blend modes, easing, hideInStartRegion).
  *

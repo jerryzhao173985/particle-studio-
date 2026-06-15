@@ -9,7 +9,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,6 +43,11 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import dev.piotrprus.particleemitter.ParticleShape
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import kotlinx.coroutines.launch
 
 /** Auto-tour dwell time per scene. */
 private const val TOUR_DWELL_MS = 8500L
@@ -130,6 +134,9 @@ fun ParticleStudioScreen() {
     val targetPps = intensity ?: scene.particlePerSecond.toFloat()
     val edge = if (edgeIndex >= 0) EDGE_OPTIONS[edgeIndex].behavior else scene.edge
     val haptics = rememberStudioHaptics(enabled = !reduceMotion)
+    val scope = rememberCoroutineScope()
+    // Captures the live stage (gradient + shader + particles, no chrome) for the share sheet.
+    val captureLayer = rememberGraphicsLayer()
 
     // Predictive back: dismiss the info panel / stop the auto-tour before the gesture exits the app.
     BackHandler(enabled = showInfo || autoTour) {
@@ -157,6 +164,10 @@ fun ParticleStudioScreen() {
             accent = accent,
             sceneIndex = sceneIndex,
             reduceMotion = reduceMotion,
+            modifier = Modifier.drawWithContent {
+                captureLayer.record { this@drawWithContent.drawContent() }
+                drawLayer(captureLayer)
+            },
         )
 
         val topBar: @Composable (Modifier) -> Unit = { m ->
@@ -169,6 +180,12 @@ fun ParticleStudioScreen() {
                 onToggleInfo = { showInfo = !showInfo; haptics.toggle(showInfo) },
                 autoTour = autoTour,
                 onToggleTour = { autoTour = !autoTour; haptics.toggle(autoTour) },
+                onShare = {
+                    haptics.select()
+                    scope.launch {
+                        runCatching { shareSceneImage(context, captureLayer.toImageBitmap(), scene.title) }
+                    }
+                },
                 reduceMotion = reduceMotion,
                 modifier = m,
             )
@@ -210,7 +227,6 @@ fun ParticleStudioScreen() {
                     Spacer(Modifier.height(14.dp))
                     SceneSelectorColumn(
                         scenes = scenes,
-                        accent = accent,
                         selected = sceneIndex,
                         onSelect = { autoTour = false; haptics.select(); goToScene(it) },
                         modifier = Modifier.weight(1f),
@@ -246,7 +262,6 @@ fun ParticleStudioScreen() {
                     controls(Modifier.padding(horizontal = 16.dp))
                     SceneSelectorRail(
                         scenes = scenes,
-                        accent = accent,
                         selected = sceneIndex,
                         onSelect = { autoTour = false; haptics.select(); goToScene(it) },
                         modifier = Modifier.padding(top = 14.dp, bottom = 8.dp),

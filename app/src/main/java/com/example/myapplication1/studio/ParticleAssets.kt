@@ -163,7 +163,7 @@ class StudioAssets(density: Density) {
         streakBitmap(longPx = (64 * d).toInt(), shortPx = (10 * d).toInt(), vertical = true)
     val streakHorizontal: ImageBitmap =
         streakBitmap(longPx = (84 * d).toInt(), shortPx = (16 * d).toInt(), vertical = false)
-    val veil: ImageBitmap = veilBitmap((124 * d).toInt(), (404 * d).toInt())
+    val veil: ImageBitmap = veilBitmap((92 * d).toInt(), (300 * d).toInt())
 }
 
 /**

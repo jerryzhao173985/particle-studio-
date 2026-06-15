@@ -30,7 +30,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -70,10 +69,6 @@ internal object StudioTokens {
     val CardCorner = 18.dp
     const val ChromeSurfaceAlpha = 0.60f
     const val ChromeBorderAlpha = 0.12f
-    val TopScrim = 140.dp
-    val BottomScrim = 300.dp
-    const val TopScrimAlpha = 0.45f
-    const val BottomScrimAlpha = 0.62f
 }
 
 @Composable
@@ -86,6 +81,7 @@ internal fun StudioTopBar(
     onToggleInfo: () -> Unit,
     autoTour: Boolean,
     onToggleTour: () -> Unit,
+    onShare: () -> Unit,
     reduceMotion: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -139,6 +135,13 @@ internal fun StudioTopBar(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GlyphToggle(
+                glyph = "↗",
+                active = false,
+                accent = accent,
+                description = "Share this scene",
+                onClick = onShare,
+            )
             GlyphToggle(
                 glyph = if (autoTour) "❚❚" else "▶",
                 active = autoTour,
@@ -239,7 +242,6 @@ internal fun SceneInfoPanel(scene: SceneSpec, accent: Color, modifier: Modifier 
 @Composable
 internal fun SceneSelectorRail(
     scenes: List<SceneSpec>,
-    accent: Color,
     selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -283,7 +285,6 @@ internal fun SceneSelectorRail(
 @Composable
 internal fun SceneSelectorColumn(
     scenes: List<SceneSpec>,
-    accent: Color,
     selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
