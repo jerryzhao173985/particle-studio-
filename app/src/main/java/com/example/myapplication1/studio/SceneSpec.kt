@@ -105,6 +105,13 @@ data class SceneSpec(
     /** True when the scene rotates its (non-circle) particles — used to orient streaks. */
     val rotates: Boolean get() = rotation.first != 0 || rotation.last != 0
 
+    /**
+     * True for additive blends (Screen / Plus / Lighten). Only these scenes get the soft bloom
+     * echo — adding a blurred bright layer to an opaque SrcOver "paper" scene would just muddy it.
+     */
+    val additive: Boolean
+        get() = blend == BlendMode.Screen || blend == BlendMode.Plus || blend == BlendMode.Lighten
+
     private val lineWidthFix: Boolean
         get() = fullWidthRegion && regionShape == CanvasEmitterConfig.Shape.H_LINE
     private val lineHeightFix: Boolean

@@ -24,11 +24,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
@@ -109,7 +112,10 @@ internal fun StudioStage(
         }
 
         val animPps by animateFloatAsState(targetPps, tween(700), label = "pps")
-        val livePps = (animPps + burst.value * BURST_BOOST).roundToInt()
+        // Breathing: the whole field gently swells and ebbs on the shared pulse clock
+        // (~±16%). Reading pulse here re-runs only this isolated stage body, not the chrome.
+        val breath = if (reduceMotion) 1f else 1f + 0.16f * (pulse.value - 0.5f) * 2f
+        val livePps = (animPps * breath + burst.value * BURST_BOOST).roundToInt()
         val animGravity by animateFloatAsState(
             if (gravityOn) scene.gravityStrength else 0f, tween(500), label = "gravity",
         )
@@ -122,14 +128,29 @@ internal fun StudioStage(
             gravityStrength = animGravity,
             edge = edge,
         )
+        // Parallax: the dust lags the steered source (moves ~⅓ as far) so dragging shears the
+        // field through depth — the main scene tracks 1:1, the backdrop trails behind it.
+        val anchorC = scene.defaultCenter(w, h)
+        val backCenter = DpOffset(
+            w / 2 + (emitX - anchorC.x) * 0.32f,
+            h / 2 + (emitY - anchorC.y) * 0.32f,
+        )
         // Keep the backdrop emitter mounted (no add/remove churn on switch), but zero its
         // birth-rate on opaque "paper" scenes so no additive dust hazes behind solid shapes.
         val backdropPps = if (scene.backdrop) (animPps * 0.18f).roundToInt().coerceIn(4, 14) else 0
         val backdropConfig = scene.toBackdropConfig(
-            center = DpOffset(w / 2, h / 2),
+            center = backCenter,
             regionSize = DpSize(w, h),
             glowShapes = backdropGlowShapes,
             particlePerSecond = backdropPps,
+        )
+
+        // Soft additive bloom: a blurred, Plus-blended, larger-particle echo of the main field,
+        // rendered just above it on luminous (additive) scenes. Half the birth-rate to stay cheap.
+        val bloomConfig = mainConfig.copy(
+            particlePerSecond = (livePps * 0.42f).roundToInt(),
+            blendMode = BlendMode.Plus,
+            particleSizes = scene.sizes.map { DpSize(it.width * 1.7f, it.height * 1.7f) },
         )
 
         // Normalised intensity for the glow pulse.
@@ -176,6 +197,18 @@ internal fun StudioStage(
 
         // --- Layer C: the main scene ---
         CanvasParticleEmitter(modifier = Modifier.fillMaxSize(), config = mainConfig)
+
+        // --- Layer C2: additive bloom — a blurred Plus echo that makes luminous scenes glow ---
+        if (scene.additive && !reduceMotion) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .blur(22.dp)
+                    .graphicsLayer { alpha = 0.5f }
+            ) {
+                CanvasParticleEmitter(modifier = Modifier.fillMaxSize(), config = bloomConfig)
+            }
+        }
 
         // --- Layer D: vignette + scene flash + tap shockwave (draw-time reads) ---
         Box(

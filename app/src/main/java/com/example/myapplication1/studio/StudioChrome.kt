@@ -26,9 +26,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -266,7 +268,39 @@ internal fun SceneSelectorRail(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         itemsIndexed(scenes, key = { _, s -> s.id }) { i, s ->
-            SceneCard(scene = s, active = i == selected, position = i + 1, onClick = { onSelect(i) })
+            SceneCard(
+                scene = s, active = i == selected, position = i + 1,
+                onClick = { onSelect(i) }, modifier = Modifier.width(132.dp),
+            )
+        }
+    }
+}
+
+/**
+ * Vertical scene list for the expanded (tablet / landscape) side panel. Same cards as the
+ * horizontal [SceneSelectorRail], stacked and full-width, auto-scrolling to the selection.
+ */
+@Composable
+internal fun SceneSelectorColumn(
+    scenes: List<SceneSpec>,
+    accent: Color,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+    LaunchedEffect(selected) { listState.animateScrollToItem(selected) }
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        itemsIndexed(scenes, key = { _, s -> s.id }) { i, s ->
+            SceneCard(
+                scene = s, active = i == selected, position = i + 1,
+                onClick = { onSelect(i) }, modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -277,6 +311,7 @@ private fun SceneCard(
     active: Boolean,
     position: Int,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val cardModifier = if (active) {
         Modifier.shadow(
@@ -294,7 +329,7 @@ private fun SceneCard(
         shape = RoundedCornerShape(StudioTokens.CardCorner),
         border = if (active) BorderStroke(1.5.dp, scene.accent) else null,
         modifier = cardModifier
-            .width(132.dp)
+            .then(modifier)
             .clickable(onClick = onClick)
             .semantics {
                 this.selected = active
