@@ -208,10 +208,11 @@ internal fun StudioStage(
         CanvasParticleEmitter(modifier = Modifier.fillMaxSize(), config = mainConfig)
 
         // --- Layer C2: additive bloom — a blurred Plus echo that makes luminous scenes glow.
-        // Built only when actually drawn; birth-rate hard-capped and blur kept modest so the
-        // full-screen offscreen blur pass stays cheap even on the heavy additive scenes.
-        // (Bloom spread comes from the blur, not particle size — size is a no-op for Image shapes.)
-        if (scene.additive && !reduceMotion) {
+        // ONLY on pre-API-33 devices: on API 33+ the GPU AGSL aurora shader already supplies the
+        // glow, so running a whole extra CPU particle simulation + full-screen blur here is pure
+        // redundant main-thread cost (the dominant cause of jank measured on-device). Gating it to
+        // !agslSupported removes a third emitter on modern phones for ~zero visual loss.
+        if (scene.additive && !reduceMotion && !agslSupported) {
             val bloomConfig = mainConfig.copy(
                 particlePerSecond = (livePps * 0.42f).roundToInt().coerceAtMost(40),
                 blendMode = BlendMode.Plus,
@@ -282,7 +283,11 @@ internal fun StudioStage(
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
-                        burstCenter = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
+                        // Tap-to-place: touching a spot moves the source THERE and keeps emitting
+                        // (it glides over and stays), then puffs a burst — instead of snapping back.
+                        val p = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
+                        onSteer(p)
+                        burstCenter = p
                         haptics.burst()
                         scope.launch {
                             burst.snapTo(1f)
