@@ -1,0 +1,36 @@
+# Built application files & Gradle
+*.iml
+.gradle/
+build/
+/captures
+.externalNativeBuild
+.cxx
+
+# Local configuration (machine-specific; contains the SDK path)
+local.properties
+
+# Kotlin
+.kotlin/
+
+# Android Studio / IntelliJ
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/deploymentTargetDropDown.xml
+/.idea/appInsightsSettings.xml
+
+# OS
+.DS_Store
+
+# Agent / tooling state (not source — local session data)
+.omc/
+.claude/
+**/.omc/
+**/.claude/
+
+# Stray artifact from a parallel session (kept locally, never published)
+*.bak.fromOtherSession
