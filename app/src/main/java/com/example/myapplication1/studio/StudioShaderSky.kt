@@ -78,6 +78,10 @@ half4 main(float2 fragCoord) {
 }
 """
 
+// A soft, base-confined warm glow that gently breathes upward — natural campfire heat, NOT a
+// busy shimmer. Low spatial frequency (a few wide columns of warm air, not stripes), smoothly
+// faded so it lives only in the lower third and never clutters the top, and low contrast so it
+// reads "in accordance" with the rising embers rather than fighting them.
 private const val HEAT_AGSL = """
 uniform float2 iResolution;
 uniform float iTime;
@@ -86,14 +90,17 @@ uniform float iIntensity;
 uniform float2 iTouch;
 half4 main(float2 fragCoord) {
     float2 uv = fragCoord / iResolution;
-    float t = iTime * 3.0;                                    // faster shimmer
-    float base = 1.0 - uv.y;                                  // strongest at the bottom
-    float wob = sin(uv.x * 22.0 + t + sin(uv.y * 12.0 - t * 0.7) * 2.0);
-    float heat = base * base * (0.5 + 0.5 * wob) * (0.35 + 0.65 * iIntensity);
+    float t = iTime;
+    // Confined to the base: full at the bottom, smoothly gone by ~35% up.
+    float base = smoothstep(0.62, 1.0, uv.y);
+    // Gentle, low-frequency rising undulation (a couple of soft warm columns).
+    float undulate = 0.7 + 0.3 * sin(uv.x * 3.0 + sin(uv.y * 2.5 - t * 1.1) * 0.7 + t * 0.5);
+    float heat = base * base * undulate * (0.4 + 0.6 * iIntensity);
+    // A faint warmth pooling at the steered source — like a breath on the embers.
     float2 d = (fragCoord - iTouch) / iResolution.y;
-    float glow = exp(-dot(d, d) * 5.0) * 0.4 * iIntensity;    // a breath on the embers
-    float v = clamp(heat + glow, 0.0, 1.0);
-    return half4(half3(iAccent) * v, v * 0.85);
+    float pool = exp(-dot(d, d) * 4.0) * 0.2 * iIntensity;
+    float v = clamp(heat + pool, 0.0, 1.0);
+    return half4(half3(iAccent) * v, v * 0.7);
 }
 """
 
@@ -105,7 +112,7 @@ private fun srcFor(atmosphere: Atmosphere): String? = when (atmosphere) {
 }
 
 private fun alphaFor(atmosphere: Atmosphere): Float = when (atmosphere) {
-    Atmosphere.Heat -> 0.42f
+    Atmosphere.Heat -> 0.34f   // confined to the base + low-contrast, so it stays gentle
     else -> 0.36f
 }
 
