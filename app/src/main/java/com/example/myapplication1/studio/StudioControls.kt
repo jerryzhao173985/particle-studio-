@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -138,13 +139,19 @@ internal fun LiveControlsPanel(
                     modifier = Modifier.semantics { contentDescription = "Reset scene to defaults" },
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Content-sized chips that wrap only when the row is too narrow: one row on the wide
+            // phone control bar, a clean 2×2 in the narrow tablet side panel — no truncation.
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 EDGE_OPTIONS.forEach { option ->
                     val selected = currentEdge::class == option.behavior::class
                     FilterChip(
                         selected = selected,
                         onClick = { onEdge(option.behavior) },
-                        label = { Text(option.label) },
+                        label = { Text(option.label, maxLines = 1) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = accent.copy(alpha = 0.22f),
                             selectedLabelColor = Color.White,

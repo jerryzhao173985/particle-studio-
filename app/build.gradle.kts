@@ -6,15 +6,13 @@ plugins {
 android {
     namespace = "com.example.myapplication1"
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(37)
     }
 
     defaultConfig {
         applicationId = "com.example.myapplication1"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
@@ -39,6 +37,7 @@ android {
 
 dependencies {
     implementation("io.github.piotrprus:particle-emitter:1.1.0")
+    implementation("androidx.graphics:graphics-shapes:1.1.0")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

@@ -44,6 +44,10 @@ import dev.piotrprus.particleemitter.ParticleShape
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+/** Drag-velocity "comet kick": a fast fling briefly spikes the birth-rate, then decays. */
+private const val FLING_BOOST = 120f   // extra particles/sec at a full-speed fling
+private const val FLING_REF = 55f      // px-per-drag-event that counts as "full speed"
+
 /**
  * The live particle stage, isolated from the chrome so the chrome doesn't recompose every
  * frame. Layered back-to-front: living gradient + colour wash + accent spotlight (drawn) →
@@ -68,10 +72,14 @@ internal fun StudioStage(
 ) {
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+    val haptics = rememberStudioHaptics(enabled = !reduceMotion)
+    val tilt by rememberTiltOffset(enabled = !reduceMotion)
 
     // Transient tap burst — does NOT latch the steering position, so ambient motion resumes.
     val burst = remember { Animatable(0f) }
     var burstCenter by remember { mutableStateOf<DpOffset?>(null) }
+    // Drag-velocity kick — a fast fling throws a comet of extra particles, then decays.
+    val fling = remember { Animatable(0f) }
 
     // Scene-change flash.
     val flash = remember { Animatable(0f) }
@@ -115,7 +123,7 @@ internal fun StudioStage(
         // Breathing: the whole field gently swells and ebbs on the shared pulse clock
         // (~±16%). Reading pulse here re-runs only this isolated stage body, not the chrome.
         val breath = if (reduceMotion) 1f else 1f + 0.16f * (pulse.value - 0.5f) * 2f
-        val livePps = (animPps * breath + burst.value * BURST_BOOST).roundToInt()
+        val livePps = (animPps * breath + burst.value * BURST_BOOST + fling.value * FLING_BOOST).roundToInt()
         val animGravity by animateFloatAsState(
             if (gravityOn) scene.gravityStrength else 0f, tween(500), label = "gravity",
         )
@@ -131,9 +139,10 @@ internal fun StudioStage(
         // Parallax: the dust lags the steered source (moves ~⅓ as far) so dragging shears the
         // field through depth — the main scene tracks 1:1, the backdrop trails behind it.
         val anchorC = scene.defaultCenter(w, h)
+        // Parallax also responds to device tilt (±30dp) so depth shifts as you tilt the phone.
         val backCenter = DpOffset(
-            w / 2 + (emitX - anchorC.x) * 0.32f,
-            h / 2 + (emitY - anchorC.y) * 0.32f,
+            w / 2 + (emitX - anchorC.x) * 0.32f + (tilt.x * 30f).dp,
+            h / 2 + (emitY - anchorC.y) * 0.32f + (tilt.y * 30f).dp,
         )
         // Keep the backdrop emitter mounted (no add/remove churn on switch), but zero its
         // birth-rate on opaque "paper" scenes so no additive dust hazes behind solid shapes.
@@ -143,14 +152,6 @@ internal fun StudioStage(
             regionSize = DpSize(w, h),
             glowShapes = backdropGlowShapes,
             particlePerSecond = backdropPps,
-        )
-
-        // Soft additive bloom: a blurred, Plus-blended, larger-particle echo of the main field,
-        // rendered just above it on luminous (additive) scenes. Half the birth-rate to stay cheap.
-        val bloomConfig = mainConfig.copy(
-            particlePerSecond = (livePps * 0.42f).roundToInt(),
-            blendMode = BlendMode.Plus,
-            particleSizes = scene.sizes.map { DpSize(it.width * 1.7f, it.height * 1.7f) },
         )
 
         // Normalised intensity for the glow pulse.
@@ -192,18 +193,33 @@ internal fun StudioStage(
                 }
         )
 
+        // --- Layer A2: GPU AGSL aurora, blended additively over the gradient (API 33+, else no-op) ---
+        AuroraShaderLayer(
+            accent = accent,
+            intensity = intensity,
+            touchPx = with(density) { Offset(emitX.toPx(), emitY.toPx()) },
+            reduceMotion = reduceMotion,
+        )
+
         // --- Layer B: parallax dust behind the main scene ---
         CanvasParticleEmitter(modifier = Modifier.fillMaxSize(), config = backdropConfig)
 
         // --- Layer C: the main scene ---
         CanvasParticleEmitter(modifier = Modifier.fillMaxSize(), config = mainConfig)
 
-        // --- Layer C2: additive bloom — a blurred Plus echo that makes luminous scenes glow ---
+        // --- Layer C2: additive bloom — a blurred Plus echo that makes luminous scenes glow.
+        // Built only when actually drawn; birth-rate hard-capped and blur kept modest so the
+        // full-screen offscreen blur pass stays cheap even on the heavy additive scenes.
+        // (Bloom spread comes from the blur, not particle size — size is a no-op for Image shapes.)
         if (scene.additive && !reduceMotion) {
+            val bloomConfig = mainConfig.copy(
+                particlePerSecond = (livePps * 0.42f).roundToInt().coerceAtMost(40),
+                blendMode = BlendMode.Plus,
+            )
             Box(
                 Modifier
                     .fillMaxSize()
-                    .blur(22.dp)
+                    .blur(14.dp)
                     .graphicsLayer { alpha = 0.5f }
             ) {
                 CanvasParticleEmitter(modifier = Modifier.fillMaxSize(), config = bloomConfig)
@@ -267,6 +283,7 @@ internal fun StudioStage(
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
                         burstCenter = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
+                        haptics.burst()
                         scope.launch {
                             burst.snapTo(1f)
                             burst.animateTo(0f, tween(750))
@@ -276,11 +293,20 @@ internal fun StudioStage(
                 .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = { offset ->
+                            haptics.steerStart()
                             onSteer(with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) })
                         },
-                        onDrag = { change, _ ->
+                        onDrag = { change, dragAmount ->
                             change.consume()
                             onSteer(with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) })
+                            // Fling velocity → a decaying comet kick on the birth-rate. Only
+                            // re-trigger when the new speed exceeds the current (decaying) level,
+                            // so a steady drag doesn't thrash the animation.
+                            val kick = (dragAmount.getDistance() / FLING_REF).coerceIn(0f, 1f)
+                            if (kick > fling.value) scope.launch {
+                                fling.snapTo(kick)
+                                fling.animateTo(0f, tween(600))
+                            }
                         },
                     )
                 }

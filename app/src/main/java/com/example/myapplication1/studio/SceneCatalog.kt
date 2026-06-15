@@ -55,7 +55,7 @@ object SceneCatalog {
             anchor = Anchor.BOTTOM_CENTER,
             regionShape = Shape.POINT,
             shapeKinds = listOf(ShapeKind.CIRCLE),
-            lifespan = 2200..3400, fadeOut = 900..1500, scaleTime = 500..900,  // fadeOut << lifespan → tapering comet jets
+            lifespan = 1500..2000, fadeOut = 900..1500, scaleTime = 500..900,  // tapering comet jets; lifespan≈fadeOut so no invisible tail is simulated
             colors = listOf(hex("#CC36F0E0"), hex("#E04DD8FF"), hex("#B300E5C8"), hex("#CC7C5CFF"), hex("#99A0F0FF"), hex("#E0CFFBFF")),
             sizes = listOf(sz(7, 7), sz(10, 10), sz(4, 4), sz(6, 6)),
             spread = -16..16, blend = BlendMode.Screen,
@@ -201,7 +201,7 @@ object SceneCatalog {
             anchor = Anchor.TOP_FULL_WIDTH,
             regionShape = Shape.H_LINE, fullWidthRegion = true,
             shapeKinds = listOf(ShapeKind.STREAK_IMAGE, ShapeKind.CIRCLE),
-            lifespan = 2200..3200, fadeOut = 700..1100, scaleTime = 300..600,  // streaky rain tails
+            lifespan = 1100..1600, fadeOut = 700..1100, scaleTime = 300..600,  // streaky rain tails; lifespan≈fadeOut (no invisible tail)
             colors = listOf(hex("#CC6CFFE6"), hex("#B33CF0D2"), hex("#E64DFFC8"), hex("#A632B5FF"), hex("#9970F0FF"), hex("#CC9CFFEA")),
             sizes = listOf(sz(3, 3), sz(4, 4), sz(2, 2)),
             spread = -6..6, blend = BlendMode.Screen,
@@ -345,7 +345,7 @@ object SceneCatalog {
             anchor = Anchor.LEFT_CENTER,
             regionShape = Shape.V_LINE, fullHeightRegion = true,
             shapeKinds = listOf(ShapeKind.GLOW_IMAGE, ShapeKind.CIRCLE, ShapeKind.STAR_PATH),
-            lifespan = 5000..8000, fadeOut = 1900..3200, scaleTime = 1500..3000,  // motes streak then twinkle out
+            lifespan = 3200..4200, fadeOut = 1900..3200, scaleTime = 1500..3000,  // motes streak then twinkle out; lifespan≈fadeOut (no invisible tail)
             colors = listOf(hex("#FFFFE9B0"), hex("#FFFFD27A"), hex("#E6FFC15A"), hex("#CCFFF0C8"), hex("#B3FFB347"), hex("#99FFE08A")),
             sizes = listOf(sz(6, 6), sz(9, 9), sz(4, 4), sz(12, 12)),
             spread = 60..120, blend = BlendMode.Lighten,
